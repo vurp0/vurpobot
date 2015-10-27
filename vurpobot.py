@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import telegram
 import subprocess
@@ -19,21 +20,23 @@ version 4: error handling
 VERSION = "4"
 
 print("Connecting to Telegram...")
-bot = telegram.Bot(token="TOKEN")
+bot = telegram.Bot(token="175897430:AAG_qwLc_vr_-Y8R7wNvXFc5HQpG2xvHB0g")
 print("Connected.")
 
 LAST_UPDATE_ID = None
 receivedUpdates = []
 
+commandSuccessful = True
 
 try:
+  #print([repl(i) for i in bot.getUpdates()])
   LAST_UPDATE_ID = bot.getUpdates()[-1].update_id
 except IndexError:
   LAST_UPDATE_ID = None
 
 def getChatName(update):
   updateDict = update.to_dict()
-  print updateDict
+  print(updateDict)
   if updateDict['message']['chat']['type'] == "group":
     return updateDict['message']['chat']['title']
   elif updateDict['message']['chat']['type'] == "private":
@@ -47,47 +50,43 @@ while True:
       #print update
       lastUpdate = update
       chat_id = update.message.chat_id
-      message = update.message.text.encode('utf-8')
+      message = update.message.text#.encode('utf-8') 
       if message == "/vurpobot":
-	print("Sending intro message")
-	bot.sendMessage(chat_id=chat_id, text="I am but a simple bot, tending to my scripts. v{}".format(VERSION))
-
-      elif message == "/fortune":
-	fortune = subprocess.check_output("fortune")
-	print("Sending fortune message: {0}".format(fortune))
-	bot.sendMessage(chat_id=chat_id, text=fortune)
-      elif message == "/hacklab":
-	tempRequest = requests.get(url="http://localhost/pi_api/temp/", params={"a":"getTemp"})
-	temperature = json.loads(tempRequest.text)['data']
-	electronicsRequest = requests.get(url="http://localhost/pi_api/gpio/", params={"a":"readPin", "pin":"1"})
-	electronicsLight = json.loads(electronicsRequest.text)['data'] == "0"
-	mechanicsRequest = requests.get(url="http://localhost/pi_api/gpio/", params={"a":"readPin", "pin":"0"})
-	mechanicsLight = json.loads(mechanicsRequest.text)['data'] == "0"
-	if not electronicsLight and not mechanicsLight:
-	  lightStatus = "Lights are off. Hacklab is probably empty."
-	elif electronicsLight != mechanicsLight:
-	  lightStatus = "Lights are on in the {} room.".format(("electronics" if electronicsLight else "mechanics"))
-	else:
-	  lightStatus = "Lights are on in both rooms!"
-	
-	responseMessage = u"{} Temperature is {:.2f}\u00b0C".format(lightStatus, temperature)
-	bot.sendMessage(chat_id=chat_id, text=responseMessage)
-
-      elif re.search("^s/.+/.+/$", message) != None:
-	match = re.search("^s/(.+)/(.+)/$", message)
-	fixUpdate = None
-	for tempUpdate in reversed(receivedUpdates):
-	  if (tempUpdate.message.text.encode('utf-8')[0] != "/") and (tempUpdate.message.chat_id == chat_id):
-	    fixUpdate = tempUpdate
-	    break
-	if fixUpdate != None:
-	  print("Sending sed correction message")
-	  fixedMessage = fixUpdate.message.text.encode('utf-8').replace(match.groups()[0], "*{}*".format(match.groups()[1]))
-	  bot.sendMessage(chat_id=chat_id, text="{}".format(fixedMessage), parse_mode=telegram.ParseMode.MARKDOWN)
-
+        commandSuccessful = false
+        print("Sending intro message")
+        bot.sendMessage(chat_id=chat_id, text="I am but a simple bot, tending to my scripts. v{}".format(VERSION))
+        commandSuccessful = true
+      elif message == "/camera 1" and chat_id == 49506617:
+        commandSuccessful = false
+        print("Sending camera 1 picture")
+        bot.sendChatAction(chat_id=49506617, action=telegram.ChatAction.UPLOAD_PHOTO)
+        #subprocess.Popen(["fswebcam", "--no-banner", "-r", "320x240", "--jpeg", "100", "-D", "1", "-S", "9", "latest.jpg"]).wait()
+        subprocess.Popen(["ffmpeg", "-y", "-f", "video4linux2", "-s", "640x480", "-i", "/dev/video0", "-ss", "0:0:2", "-frames", "1", "latest1.jpg"]).wait()
+        pic = open("latest1.jpg", "rb")
+        bot.sendPhoto(chat_id=49506617, photo=pic)
+        pic.close()
+        commandSuccessful = true
+      elif message == "/camera 2" and chat_id == 49506617:
+        commandSuccessful = false
+        print("Sending camera 2 picture")
+        bot.sendChatAction(chat_id=49506617, action=telegram.ChatAction.UPLOAD_PHOTO)
+        #subprocess.Popen(["fswebcam", "--no-banner", "-r", "320x240", "--jpeg", "100", "-D", "1", "-S", "9", "latest.jpg"]).wait()
+        subprocess.Popen(["ffmpeg", "-y", "-f", "video4linux2", "-s", "640x480", "-i", "/dev/video1", "-ss", "0:0:2", "-frames", "1", "latest2.jpg"]).wait()
+        pic = open("latest2.jpg", "rb")
+        bot.sendPhoto(chat_id=49506617, photo=pic)
+        pic.close()
+        commandSuccessful = true
+      elif re.search("^/speak .+$", message) != None:
+        commandSuccessful = false
+        match = re.search("^/speak (.+)$", message)
+        subprocess.Popen(["./speak_to_opus.sh", match.groups()[0]]).wait()
+        speak = open("output.ogg", "rb")
+        bot.sendVoice(chat_id=chat_id, voice=speak)
+        speak.close()
+        commandSuccessful = true
       else:
-	receivedUpdates.append(update)
-	print update
+        receivedUpdates.append(update)
+        print(update)
         #print receivedUpdates
      
       LAST_UPDATE_ID = update.update_id+1
@@ -98,10 +97,13 @@ while True:
     err = traceback.format_exc()
     print("Caught exception, reporting\n***\n{}***".format(err))  
     try:
-      bot.sendMessage(chat_id=49506617, text="*Error in chat \"{0}\":*\n```\n{1}\n```".format(getChatName(lastUpdate), err), parse_mode=telegram.ParseMode.MARKDOWN) #Hardcoded chat id
-      bot.sendMessage(chat_id=chat_id, text="Error processing command! Reported to vurpo.")
+      if not commandSuccessful:
+        bot.sendMessage(chat_id=49506617, text="*Error in chat \"{0}\":*\n```\n{1}\n```".format(getChatName(lastUpdate), err), parse_mode=telegram.ParseMode.MARKDOWN) #Hardcoded chat id
+        bot.sendMessage(chat_id=chat_id, text="Error processing command! Reported to vurpo.")
+      else:
+        bot.sendMessage(chat_id=49506617, text="*Error in mainloop:*\n```\n{1}\n```".format( err), parse_mode=telegram.ParseMode.MARKDOWN) #Hardcoded chat id
     except:
-      print("Couldn't report exception")
+      print("Exception caught while reporting exception")
       print(traceback.format_exc())
   finally:
     LAST_UPDATE_ID = update.update_id+1
