@@ -15,10 +15,12 @@ def getChatName(update):
 
 class CommandProcessor:
   def __init__(self, bot):
+    print("Init CommandProcessor")
     self.ownerID = 49506617
     self.bot = bot
     self.lastUpdateID = None
     self.commandMap = []
+    self.voiceHandlers = []
     try:
       self.lastUpdateID = self.bot.getUpdates()[-1].update_id
     except IndexError:
@@ -42,6 +44,12 @@ class CommandProcessor:
             handler.handleCommand(update)
           else:
             print("chat_id {0} not in handler.accessControl {1}, denying".format(update.message.chat_id, handler.accessControl))
+      for handler in self.voiceHandlers:
+        if update.message.voice:
+          if handler.accessControl == [] or update.message.chat_id in handler.accessControl:
+            handler.handleVoice(update)
+          else:
+            print("denied voiceHandler")
         
     except:
       self.reportCommandError(update)
@@ -64,6 +72,10 @@ class CommandProcessor:
     handler.setBot(self.bot)
     self.commandMap.append(handler)
 
+  def registerVoiceHandler(self, handler):
+    handler.setBot(self.bot)
+    self.voiceHandlers.append(handler)
+
 class CommandHandler:
   def __init__(self, access):
     self.command = "/command"
@@ -74,6 +86,16 @@ class CommandHandler:
 
   def handleCommand(self, update):
     self.bot.sendMessage(chat_id=update.message.chat_id, text="Default CommandHandler reply")
+
+class VoiceHandler:
+  def __init__(self, access):
+    self.accessControl = access
+  
+  def setBot(self, bot):
+    self.bot = bot
+
+  def handleVoice(self, update):
+    self.bot.sendMessage(chat_id=update.message.chat_id, text="Default VoiceHandler reply")
 
 if __name__ == "__main__":
   processor = CommandProcessor(telegram.Bot(token="TOKEN"))

@@ -61,24 +61,31 @@ class FailHandler(CommandHandler):
   def handleCommand(self, update):
     raise(Exception("Can't run the /fail command without raising an exception"))
 
-class AnnounceHandler(CommandHandler):
+class AnnounceHandler(CommandHandler,VoiceHandler):
   def __init__(self, access):
     self.command = "/announce"
     self.accessControl = access
 
   def handleCommand(self, update):
-    argument = update.message.text.replace("{} ".format(self.command), "")
-    self.bot.sendMessage(chat_id=update.message.chat_id, text="WIP")
+    #argument = update.message.text.replace("{} ".format(self.command), "")
+    #self.bot.sendMessage(chat_id=update.message.chat_id, text="WIP")
+    self.voiceFile.download("received.ogg")
+    subprocess.Popen(["mplayer", "received.ogg"]).wait()
+  
+  def handleVoice(self, update):
+    self.voiceFile = self.bot.getFile(file_id=update.message.voice.file_id)
 
 if __name__ == "__main__":
   config = open("config.txt", "r")
   processor = CommandProcessor(telegram.Bot(token=config.read().rstrip()))
   config.close()
-  processor.registerCommandHandler(CameraHandler([49506617]))
+  #processor.registerCommandHandler(CameraHandler([49506617]))
   processor.registerCommandHandler(VurpobotHandler([]))
-  processor.registerCommandHandler(SpeakHandler([]))
+  #processor.registerCommandHandler(SpeakHandler([]))
   processor.registerCommandHandler(FailHandler([]))
-  processor.registerCommandHandler(AnnounceHandler([49506617]))
+  announceHandler = AnnounceHandler([])
+  processor.registerCommandHandler(announceHandler)
+  processor.registerVoiceHandler(announceHandler)
   while True:
     try:
       processor.main()
