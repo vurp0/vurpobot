@@ -3,6 +3,8 @@
 from libvurpobot import *
 import sys
 import subprocess
+import requests
+import json
 
 def isInt(string):
   try:
@@ -75,6 +77,40 @@ class AnnounceHandler(CommandHandler,VoiceHandler):
   def handleVoice(self, update):
     self.voiceFile = self.bot.getFile(file_id=update.message.voice.file_id)
 
+class HacklabHandler(CommandHandler):
+  def __init__(self, access):
+    self.command = "/hacklab"
+    self.accessControl = access
+  
+  def handleCommand(self, update):
+    apiServer="192.168.11.2"
+    tempRequest = requests.get(url="http://{}/pi_api/temp/".format(apiServer), params={"a":"getTemp"})
+    temperature = json.loads(tempRequest.text)['data']
+    electronicsRequest = requests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"1"})
+    electronicsLight = json.loads(electronicsRequest.text)['data'] == "0"
+    mechanicsRequest = requests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"0"})
+    mechanicsLight = json.loads(mechanicsRequest.text)['data'] == "0"
+    if not electronicsLight and not mechanicsLight:
+      lightStatus = "Lights are off. Hacklab is probably empty."
+    elif electronicsLight != mechanicsLight:
+      lightStatus = "Lights are on in the {} room.".format(("electronics" if electronicsLight else "mechanics"))
+    else:
+      lightStatus = "Lights are on in both rooms!"
+
+    responseMessage = u"{} Temperature is {:.1f}\u00b0C".format(lightStatus, temperature)
+    self.bot.sendMessage(chat_id=update.message.chat_id, text=responseMessage)
+
+class HumidityHandler(CommandHandler):
+  def __init__(self, access):
+    self.command = "/humidity"
+    self.accessControl = access
+  
+  def handleCommand(self, update):
+    apiServer="192.168.11.2"
+    humRequest = requests.get(url="https://{}/pi_api/humidity/".format(apiServer), params={"a":"getHumidity"})
+    humidity = json.loads(humRequest.text)['data']
+    self.bot.sendMessage(chat_id=update.message.chat_id, text="Humidity is {}%".format(humidity))
+
 if __name__ == "__main__":
   config = open("config.txt", "r")
   processor = CommandProcessor(telegram.Bot(token=config.read().rstrip()))
@@ -86,6 +122,7 @@ if __name__ == "__main__":
   announceHandler = AnnounceHandler([])
   processor.registerCommandHandler(announceHandler)
   processor.registerVoiceHandler(announceHandler)
+  processor.registerCommandHandler(HacklabHandler([]))
   while True:
     try:
       processor.main()
