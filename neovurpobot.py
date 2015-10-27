@@ -83,9 +83,11 @@ class HacklabHandler(CommandHandler):
     self.accessControl = access
   
   def handleCommand(self, update):
-    apiServer="192.168.11.2"
+    apiServer="localhost"
     tempRequest = requests.get(url="http://{}/pi_api/temp/".format(apiServer), params={"a":"getTemp"})
     temperature = json.loads(tempRequest.text)['data']
+    humRequest = requests.get(url="http://{}/pi_api/humidity/".format(apiServer), params={"a":"getHumidity"})
+    humidity = json.loads(humRequest.text)['data']
     electronicsRequest = requests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"1"})
     electronicsLight = json.loads(electronicsRequest.text)['data'] == "0"
     mechanicsRequest = requests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"0"})
@@ -97,7 +99,7 @@ class HacklabHandler(CommandHandler):
     else:
       lightStatus = "Lights are on in both rooms!"
 
-    responseMessage = u"{} Temperature is {:.1f}\u00b0C".format(lightStatus, temperature)
+    responseMessage = "{} Temperature is {:.1f}\u00b0C. Humidity is {}".format(lightStatus, temperature, humidity)
     self.bot.sendMessage(chat_id=update.message.chat_id, text=responseMessage)
 
 class HumidityHandler(CommandHandler):
@@ -106,8 +108,8 @@ class HumidityHandler(CommandHandler):
     self.accessControl = access
   
   def handleCommand(self, update):
-    apiServer="192.168.11.2"
-    humRequest = requests.get(url="https://{}/pi_api/humidity/".format(apiServer), params={"a":"getHumidity"})
+    apiServer="localhost"
+    humRequest = requests.get(url="http://{}/pi_api/humidity/".format(apiServer), params={"a":"getHumidity"})
     humidity = json.loads(humRequest.text)['data']
     self.bot.sendMessage(chat_id=update.message.chat_id, text="Humidity is {}%".format(humidity))
 
@@ -115,14 +117,12 @@ if __name__ == "__main__":
   config = open("config.txt", "r")
   processor = CommandProcessor(telegram.Bot(token=config.read().rstrip()))
   config.close()
-  #processor.registerCommandHandler(CameraHandler([49506617]))
   processor.registerCommandHandler(VurpobotHandler([]))
-  #processor.registerCommandHandler(SpeakHandler([]))
-  processor.registerCommandHandler(FailHandler([]))
   announceHandler = AnnounceHandler([])
   processor.registerCommandHandler(announceHandler)
   processor.registerVoiceHandler(announceHandler)
   processor.registerCommandHandler(HacklabHandler([]))
+  processor.registerCommandHandler(HumidityHandler([]))
   while True:
     try:
       processor.main()
