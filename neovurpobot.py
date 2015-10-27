@@ -71,7 +71,9 @@ class AnnounceHandler(CommandHandler):
     self.bot.sendMessage(chat_id=update.message.chat_id, text="WIP")
 
 if __name__ == "__main__":
-  processor = CommandProcessor(telegram.Bot(token="TOKEN"))
+  config = open("config.txt", "r")
+  processor = CommandProcessor(telegram.Bot(token=config.read().rstrip()))
+  config.close()
   processor.registerCommandHandler(CameraHandler([49506617]))
   processor.registerCommandHandler(VurpobotHandler([]))
   processor.registerCommandHandler(SpeakHandler([]))
