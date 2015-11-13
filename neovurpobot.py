@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from libvurpobot import *
+import time
 import sys
 import subprocess
 import requests
@@ -37,6 +38,8 @@ class VurpobotHandler(CommandHandler):
     self.accessControl = access
   
   def handleCommand(self, update):
+    self.bot.sendChatAction(chat_id=update.message.chat_id, action=telegram.ChatAction.TYPING)
+    time.sleep(4)
     self.bot.sendMessage(chat_id=update.message.chat_id, text="JavaScript fuel can't melt Python beams")
 
 class SpeakHandler(CommandHandler):
@@ -118,11 +121,9 @@ if __name__ == "__main__":
   processor = CommandProcessor(telegram.Bot(token=config.read().rstrip()))
   config.close()
   processor.registerCommandHandler(VurpobotHandler([]))
-  announceHandler = AnnounceHandler([])
-  processor.registerCommandHandler(announceHandler)
-  processor.registerVoiceHandler(announceHandler)
   processor.registerCommandHandler(HacklabHandler([]))
-  processor.registerCommandHandler(HumidityHandler([]))
+  processor.registerCommandHandler(CameraHandler([]))
+  processor.registerCommandHandler(SpeakHandler([]))
   while True:
     try:
       processor.main()
