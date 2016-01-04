@@ -72,7 +72,8 @@ class AnnounceHandler(CommandHandler,VoiceHandler):
     #argument = update.message.text.replace("{} ".format(self.command), "")
     #self.bot.sendMessage(chat_id=update.message.chat_id, text="WIP")
     self.voiceFile.download("received.ogg")
-    subprocess.Popen(["mplayer", "received.ogg"]).wait()
+    subprocess.Popen(["opusdec", "received.ogg", "received.wav"]).wait()
+    subprocess.Popen(["mplayer", "received.wav"]).wait()
   
   def handleVoice(self, update):
     self.voiceFile = self.bot.getFile(file_id=update.message.voice.file_id)
@@ -99,7 +100,7 @@ class HacklabHandler(CommandHandler):
     else:
       lightStatus = "Lights are on in both rooms!"
 
-    responseMessage = "{} Temperature is {:.1f}\u00b0C. Humidity is {}".format(lightStatus, temperature, humidity)
+    responseMessage = "{} Temperature is {:.1f}\u00b0C. Humidity is {}%".format(lightStatus, temperature, humidity)
     self.bot.sendMessage(chat_id=update.message.chat_id, text=responseMessage)
 
 class HumidityHandler(CommandHandler):
@@ -118,11 +119,11 @@ if __name__ == "__main__":
   processor = CommandProcessor(telegram.Bot(token=config.read().rstrip()))
   config.close()
   processor.registerCommandHandler(VurpobotHandler([]))
-  announceHandler = AnnounceHandler([])
+  announceHandler = AnnounceHandler([-3450879])
   processor.registerCommandHandler(announceHandler)
   processor.registerVoiceHandler(announceHandler)
   processor.registerCommandHandler(HacklabHandler([]))
-  processor.registerCommandHandler(HumidityHandler([]))
+  #processor.registerCommandHandler(HumidityHandler([]))
   while True:
     try:
       processor.main()

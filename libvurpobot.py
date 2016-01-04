@@ -33,7 +33,7 @@ class CommandProcessor:
     except KeyboardInterrupt:
       raise
     except:
-      print("TODO: Report caught exception in mainloop")
+      self.reportMainloopError()
 
   def processUpdate(self, update):
     try:
@@ -56,6 +56,17 @@ class CommandProcessor:
     finally:
       self.lastUpdateID = update.update_id+1
 
+  def reportMainloopError(self):
+    print("Caught exception in mainloop! Reporting to bot owner")
+    err = traceback.format_exc()
+    print(err)
+    try:
+      self.bot.sendMessage(chat_id=self.ownerID, text='*Error in mainloop*:\n```\n{1}```'.format(err), parse_mode=telegram.ParseMode.MARKDOWN)
+    except:
+      print("Caught exception while reporting exception!")
+      #print(err)
+      print(traceback.format_exc())
+
   def reportCommandError(self, update):
     print("Caught exception while handling command! Reporting to bot owner")
     err = traceback.format_exc()
@@ -65,7 +76,7 @@ class CommandProcessor:
       self.bot.sendMessage(chat_id=update.message.chat_id, text='An error occurred! Reported.', reply_to_message_id=update.message.message_id)
     except:
       print("Caught exception while reporting exception!")
-      print(err)
+      #print(err)
       print(traceback.format_exc())
 
   def registerCommandHandler(self, handler):
