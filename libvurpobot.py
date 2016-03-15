@@ -17,10 +17,12 @@ class CommandProcessor:
   def __init__(self, bot):
     print("Init CommandProcessor")
     self.ownerID = 49506617
+    self.userName = bot.username
     self.bot = bot
     self.lastUpdateID = None
     self.commandMap = []
     self.voiceHandlers = []
+    print("DEBUG: created CommandProcessor for bot {} with owner {}".format(self.ownerID, self.userName))
     try:
       self.lastUpdateID = self.bot.getUpdates()[-1].update_id
     except IndexError:
@@ -39,7 +41,7 @@ class CommandProcessor:
     try:
       print(update)
       for handler in self.commandMap:
-        if update.message.text.startswith("{} ".format(handler.command)) or update.message.text == handler.command:
+        if update.message.text.startswith("{} ".format(handler.command)) or update.message.text == handler.command or update.message.text.startswith("{}@{} ".format(handler.command, self.userName)) or update.message.text == "{}@{}".format(handler.command ,self.userName):
           if handler.accessControl == [] or update.message.chat_id in handler.accessControl:
             handler.handleCommand(update)
           else:
