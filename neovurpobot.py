@@ -87,6 +87,7 @@ class HacklabHandler(CommandHandler):
     self.accessControl = access
   
   def handleCommand(self, update):
+    self.bot.sendChatAction(chat_id=update.message.chat_id, action=telegram.ChatAction.TYPING)
     apiServer="localhost"
     tempRequest = requests.get(url="http://{}/pi_api/temp/".format(apiServer), params={"a":"getTemp"})
     temperature = json.loads(tempRequest.text)['data']
