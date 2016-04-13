@@ -93,6 +93,8 @@ class HacklabHandler(CommandHandler):
     temperature = json.loads(tempRequest.text)['data']
     humRequest = requests.get(url="http://{}/pi_api/humidity/".format(apiServer), params={"a":"getHumidity"})
     humidity = json.loads(humRequest.text)['data']
+    pirRequest = requests.get(url="http://{}/pi_api/pir/".format(apiServer), params={"a":"getStatus"})
+    pirStatus = json.loads(pirRequest.text)['time']
     electronicsRequest = requests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"1"})
     electronicsLight = json.loads(electronicsRequest.text)['data'] == "0"
     mechanicsRequest = requests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"0"})
@@ -104,7 +106,7 @@ class HacklabHandler(CommandHandler):
     else:
       lightStatus = "Lights are on in both rooms!"
 
-    responseMessage = "{} Temperature is {:.1f}\u00b0C. Humidity is {}%".format(lightStatus, temperature, humidity)
+    responseMessage = "{} Last movement at {}. Temperature is {:.1f}\u00b0C. Humidity is {}%".format(lightStatus, pirStatus, temperature, humidity)
     self.bot.sendMessage(chat_id=update.message.chat_id, text=responseMessage)
 
 class HumidityHandler(CommandHandler):
