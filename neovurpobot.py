@@ -4,7 +4,7 @@ from libvurpobot import *
 import time
 import sys
 import subprocess
-import requests
+import grequests
 import json
 
 def isInt(string):
@@ -89,16 +89,22 @@ class HacklabHandler(CommandHandler):
   def handleCommand(self, update):
     self.bot.sendChatAction(chat_id=update.message.chat_id, action=telegram.ChatAction.TYPING)
     apiServer="localhost"
-    tempRequest = requests.get(url="http://{}/pi_api/temp/".format(apiServer), params={"a":"getTemp"})
-    temperature = json.loads(tempRequest.text)['data']
-    humRequest = requests.get(url="http://{}/pi_api/humidity/".format(apiServer), params={"a":"getHumidity"})
-    humidity = json.loads(humRequest.text)['data']
-    pirRequest = requests.get(url="http://{}/pi_api/pir/".format(apiServer), params={"a":"getStatus"})
-    pirStatus = json.loads(pirRequest.text)['time']
-    electronicsRequest = requests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"1"})
-    electronicsLight = json.loads(electronicsRequest.text)['data'] == "0"
-    mechanicsRequest = requests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"0"})
-    mechanicsLight = json.loads(mechanicsRequest.text)['data'] == "0"
+    hacklabRequests = [
+        grequests.get(url="http://{}/pi_api/temp/".format(apiServer), params={"a":"getTemp"}),              # 0: temperature
+        grequests.get(url="http://{}/pi_api/humidity/".format(apiServer), params={"a":"getHumidity"}),      # 1: humidity
+        grequests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"1"}),   # 2: electronics
+        grequests.get(url="http://{}/pi_api/gpio/".format(apiServer), params={"a":"readPin", "pin":"0"}),   # 3: mechanics
+        grequests.get(url="http://{}/pi_api/pir/".format(apiServer), params={"a":"getStatus"})]             # 4: PIR
+    hacklabResponses = grequests.map(hacklabRequests)
+    if None in hacklabResponses:
+        raise ConnectionError("A request for the /hacklab command failed!")
+
+    temperature = json.loads(hacklabResponses[0].text)['data']
+    humidity = json.loads(hacklabResponses[1].text)['data']
+    electronicsLight = json.loads(hacklabResponses[2].text)['data'] == "0"
+    mechanicsLight = json.loads(hacklabResponses[3].text)['data'] == "0"
+    pirStatus = json.loads(hacklabResponses[4].text)['time']
+
     if not electronicsLight and not mechanicsLight:
       lightStatus = "Lights are off. Hacklab is probably empty."
     elif electronicsLight != mechanicsLight:
